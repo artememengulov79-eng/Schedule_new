@@ -4,16 +4,13 @@ import random
 import json
 import os
 
-# ================= КОНФИГУРАЦИЯ ГРАФИКА (БЕЗ ИЗМЕНЕНИЙ) =================
+# ================= КОНФИГУРАЦИЯ ГРАФИКА =================
 
 def generate_schedule(employees, year, month, shift_config, absences, shuffle_iterations=1000):
-    """
-    Вариант 3: Двухэтапный алгоритм.
-    Учитывает: Допуски, Отдых, ОТСУТСТВИЯ.
-    """
+
     _, num_days = calendar.monthrange(year, month)
     
-    # --- ЭТАП 1: Создание сбалансированного скелета ---
+
     schedule = {}
     emp_shifts_count = {emp: 0 for emp in employees}
 
@@ -26,7 +23,7 @@ def generate_schedule(employees, year, month, shift_config, absences, shuffle_it
         for s_type in needed_shifts:
             allowed = shift_config[s_type]["allowed_employees"]
             
-            # 🟢 ФИЛЬТР: Допущенные + НЕ ОТСУТСТВУЮЩИЕ
+            
             candidates = [
                 emp for emp in employees 
                 if emp in allowed and day not in absences.get(emp, [])
@@ -44,7 +41,7 @@ def generate_schedule(employees, year, month, shift_config, absences, shuffle_it
                 schedule[(chosen, day)] = s_type
                 emp_shifts_count[chosen] += 1
 
-    # --- ЭТАП 2: Рандомизация (Перемешивание) ---
+
     current_shifts = []
     for (emp, day), s_type in schedule.items():
         current_shifts.append({'day': day, 'type': s_type, 'emp': emp})
@@ -104,7 +101,7 @@ def _can_take_shift(emp, target_day, target_type, shifts_list, shift_config):
     return True
 
 def print_matrix_schedule(schedule, employees, num_days, absences):
-    """Выводит график с пометкой '*' в дни отсутствия."""
+    
     header = f"{'ФИО':<16}|"
     for d in range(1, num_days + 1):
         header += f" {d:02d} |"
@@ -124,7 +121,7 @@ def print_matrix_schedule(schedule, employees, num_days, absences):
         print(row)
 
 def export_to_csv(schedule, employees, year, month, num_days, absences, filename="график_дежурств.json_данные.csv"):
-    """Экспортирует график в CSV с пометкой '*' в дни отсутствия."""
+    
     with open(filename, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["ФИО"] + [f"{d:02d}.{month:02d}" for d in range(1, num_days + 1)])
@@ -143,7 +140,7 @@ def export_to_csv(schedule, employees, year, month, num_days, absences, filename
 # ================= ЗАГРУЗКА ДАННЫХ ИЗ JSON =================
 
 def load_json_file(filename):
-    """Загружает данные из JSON файла."""
+    
     if not os.path.exists(filename):
         print(f"⚠️ Файл '{filename}' не найден. Будет создан пустой шаблон.")
         return {}
@@ -162,8 +159,7 @@ if __name__ == "__main__":
     print(f"📅 Планирование графика на {calendar.month_name[MONTH]} {YEAR}")
     print("Загрузка данных из JSON файлов...")
 
-    # 1. ЗАГРУЗКА СОТРУДНИКОВ
-    # Файл должен содержать список: ["Иванов", "Петров"]
+
     raw_employees = load_json_file("employees.json")
     if isinstance(raw_employees, list):
         EMPLOYEES = raw_employees
@@ -173,10 +169,10 @@ if __name__ == "__main__":
 
     print(f"👥 Загружено сотрудников: {len(EMPLOYEES)}")
 
-    # 2. ЗАГРУЗКА ВИДОВ ДЕЖУРСТВ (с поддержкой месяцев)
+
     raw_shifts_all = load_json_file("shifts.json")
     
-    # Ищем правила для текущего месяца, если нет -> берём "default", если нет -> пусто
+
     month_shifts_raw = raw_shifts_all.get(month_key, raw_shifts_all.get("default", {}))
     
     shift_config = {}
@@ -185,7 +181,7 @@ if __name__ == "__main__":
         rest = int(s_data.get("rest_days", 1))
         allowed = s_data.get("allowed_employees", [])
         
-        # Фильтруем допущенных: оставляем только тех, кто есть в актуальном списке
+
         valid_allowed = [emp for emp in allowed if emp in EMPLOYEES]
         
         shift_config[s_name] = {
@@ -196,16 +192,15 @@ if __name__ == "__main__":
         }
         print(f"   📌 Вид '{s_name}': допущено {len(valid_allowed)} чел.")
 
-    # 3. ЗАГРУЗКА ОТСУТСТВИЙ
-    # Файл содержит словарь { "2026-06": { "Иванов": [1,2] }, ... }
+
     raw_absences_all = load_json_file("absences.json")
-    # Берем данные только для текущего месяца
+
     ABSENCES = raw_absences_all.get(month_key, {})
     
     abs_count = sum(len(d) for d in ABSENCES.values())
     print(f"   🏖️ Отсутствий в этом месяце: {abs_count} дн.")
 
-    # ПРОВЕРКА ДАННЫХ
+
     if not EMPLOYEES:
         print(" Список сотрудников пуст. Создайте файл employees.json")
         exit()
@@ -213,7 +208,7 @@ if __name__ == "__main__":
         print("❌ Настройки смен пусты. Создайте файл shifts.json")
         exit()
 
-    # 🚀 ГЕНЕРАЦИЯ
+
     print("\n🔄 Генерация графика...")
     schedule, num_days = generate_schedule(EMPLOYEES, YEAR, MONTH, shift_config, ABSENCES, shuffle_iterations=1000)
     
